@@ -1100,19 +1100,6 @@ class Resource(object):
 
         return True
 
-    def rollback(self, bundles):
-        """
-        Given the list of bundles, delete all objects pertaining to those
-        bundles.
-
-        This needs to be implemented at the user level. No exceptions should
-        be raised if possible.
-
-        ``ModelResource`` includes a full working version specific to Django's
-        ``Models``.
-        """
-        raise NotImplementedError()
-
     # Views.
 
     def get_list(self, request, **kwargs):
@@ -1186,14 +1173,8 @@ class Resource(object):
             for object_data in deserialized['objects']:
                 bundle = self.build_bundle(data=dict_strip_unicode_keys(object_data), request=request)
 
-                # Attempt to be transactional, deleting any previously created
-                # objects if validation fails.
-                try:
-                    self.obj_create(bundle, request=request, **self.remove_api_resource_names(kwargs))
-                    bundles_seen.append(bundle)
-                except ImmediateHttpResponse:
-                    self.rollback(bundles_seen)  # @@@ This isn't required with real Transactions, but is with Dummy... How to handle?
-                    raise
+                self.obj_create(bundle, request=request, **self.remove_api_resource_names(kwargs))
+                bundles_seen.append(bundle)
 
             if not self._meta.always_return_data:
                 return http.HttpNoContent()
@@ -2046,17 +2027,6 @@ class ModelResource(Resource):
                 raise NotFound("A model instance matching the provided arguments could not be found.")
 
         obj.delete()
-
-    def rollback(self, bundles):
-        """
-        A ORM-specific implementation of ``rollback``.
-
-        Given the list of bundles, delete all models pertaining to those
-        bundles.
-        """
-        for bundle in bundles:
-            if bundle.obj and self.get_bundle_detail_data(bundle):
-                bundle.obj.delete()
 
     def save_related(self, bundle):
         """
