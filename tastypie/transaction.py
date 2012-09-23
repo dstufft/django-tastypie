@@ -47,24 +47,29 @@ class DjangoTransaction(Transaction):
     database transaction system.
     """
 
+    def __init__(self, using=None, *args, **kwargs):
+        super(DjangoTransaction, self).__init__(*args, **kwargs)
+
+        self.using = using
+
     def start(self):
-        transaction.enter_transaction_management()
-        transaction.managed(True)
+        transaction.enter_transaction_management(using=self.using)
+        transaction.managed(True, using=self.using)
 
     def commit(self):
         try:
-            if transaction.is_dirty():
+            if transaction.is_dirty(using=self.using):
                 try:
-                    transaction.commit()
+                    transaction.commit(using=self.using)
                 except:
-                    transaction.rollback()
+                    transaction.rollback(using=self.using)
                     raise
         finally:
-            transaction.leave_transaction_management()
+            transaction.leave_transaction_management(using=self.using)
 
     def rollback(self):
         try:
-            if transaction.is_dirty():
-                transaction.rollback()
+            if transaction.is_dirty(using=self.using):
+                transaction.rollback(using=self.using)
         finally:
-            transaction.leave_transaction_management()
+            transaction.leave_transaction_management(using=self.using)
