@@ -2047,16 +2047,6 @@ class ModelResource(Resource):
 
         obj.delete()
 
-    @transaction.commit_on_success()
-    def patch_list(self, request, **kwargs):
-        """
-        An ORM-specific implementation of ``patch_list``.
-
-        Necessary because PATCH should be atomic (all-success or all-fail)
-        and the only way to do this neatly is at the database level.
-        """
-        return super(ModelResource, self).patch_list(request, **kwargs)
-
     def rollback(self, bundles):
         """
         A ORM-specific implementation of ``rollback``.
