@@ -360,6 +360,12 @@ class Resource(object):
         """
         return determine_format(request, self._meta.serializer, default_format=self._meta.default_format)
 
+    def get_transaction_manager(self):
+        """
+        Used to instantiate and return the desired transaction class.
+        """
+        return self._meta.transaction_class()
+
     def serialize(self, request, data, format, options=None):
         """
         Given a request, data and a desired format, produces a serialized
@@ -1165,7 +1171,7 @@ class Resource(object):
         if not 'objects' in deserialized:
             raise BadRequest("Invalid data sent.")
 
-        with self._meta.transaction_class():
+        with self.get_transaction_manager():
             self.obj_delete_list(request=request, **self.remove_api_resource_names(kwargs))
 
             bundles_seen = []
@@ -1208,7 +1214,7 @@ class Resource(object):
         bundle = self.build_bundle(data=dict_strip_unicode_keys(deserialized), request=request)
 
         try:
-            with self._meta.transaction_class():
+            with self.get_transaction_manager():
                 updated_bundle = self.obj_update(bundle, request=request, **self.remove_api_resource_names(kwargs))
 
                 if not self._meta.always_return_data:
@@ -1218,7 +1224,7 @@ class Resource(object):
                     updated_bundle = self.alter_detail_data_to_serialize(request, updated_bundle)
                     return self.create_response(request, updated_bundle, response_class=http.HttpAccepted)
         except (NotFound, MultipleObjectsReturned):
-            with self._meta.transaction_class():
+            with self.get_transaction_manager():
                 updated_bundle = self.obj_create(bundle, request=request, **self.remove_api_resource_names(kwargs))
                 location = self.get_resource_uri(updated_bundle)
 
@@ -1244,7 +1250,7 @@ class Resource(object):
         deserialized = self.alter_deserialized_detail_data(request, deserialized)
         bundle = self.build_bundle(data=dict_strip_unicode_keys(deserialized), request=request)
 
-        with self._meta.transaction_class():
+        with self.get_transaction_manager():
             updated_bundle = self.obj_create(bundle, request=request, **self.remove_api_resource_names(kwargs))
             location = self.get_resource_uri(updated_bundle)
 
@@ -1274,7 +1280,7 @@ class Resource(object):
 
         If the resources are deleted, return ``HttpNoContent`` (204 No Content).
         """
-        with self._meta.transaction_class():
+        with self.get_transaction_manager():
             self.obj_delete_list(request=request, **self.remove_api_resource_names(kwargs))
             return http.HttpNoContent()
 
@@ -1288,7 +1294,7 @@ class Resource(object):
         If the resource did not exist, return ``Http404`` (404 Not Found).
         """
         try:
-            with self._meta.transaction_class():
+            with self.get_transaction_manager():
                 self.obj_delete(request=request, **self.remove_api_resource_names(kwargs))
                 return http.HttpNoContent()
         except NotFound:
@@ -1356,7 +1362,7 @@ class Resource(object):
         if len(deserialized.get('deleted_objects', [])) and 'delete' not in self._meta.detail_allowed_methods:
             raise ImmediateHttpResponse(response=http.HttpMethodNotAllowed())
 
-        with self._meta.transaction_class():
+        with self.get_transaction_manager():
             for data in deserialized["objects"]:
                 # If there's a resource_uri then this is either an
                 # update-in-place or a create-via-PUT.
@@ -1418,7 +1424,7 @@ class Resource(object):
         bundle = self.full_dehydrate(bundle)
         bundle = self.alter_detail_data_to_serialize(request, bundle)
 
-        with self._meta.transaction_class():
+        with self.get_transaction_manager():
             # Now update the bundle in-place.
             deserialized = self.deserialize(request, request.raw_post_data, format=request.META.get('CONTENT_TYPE', 'application/json'))
             self.update_in_place(request, bundle, deserialized)
