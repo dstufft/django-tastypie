@@ -436,11 +436,6 @@ class ResourceTestCase(TestCase):
         basic = BasicResource()
         self.assertRaises(NotImplementedError, basic.obj_delete)
 
-    def test_rollback(self):
-        basic = BasicResource()
-        bundles_seen = []
-        self.assertRaises(NotImplementedError, basic.rollback, bundles_seen)
-
     def adjust_schema(self, schema_dict):
         for field, field_info in schema_dict['fields'].items():
             if isinstance(field_info['default'], fields.NOT_PROVIDED):
@@ -2667,19 +2662,6 @@ class ModelResourceTestCase(TestCase):
         note.obj_delete(slug='another-post')
         self.assertEqual(Note.objects.all().count(), 4)
         self.assertRaises(Note.DoesNotExist, Note.objects.get, slug='another-post')
-
-    def test_rollback(self):
-        self.assertEqual(Note.objects.all().count(), 6)
-        note = NoteResource()
-
-        bundles_seen = []
-        note.rollback(bundles_seen)
-        self.assertEqual(Note.objects.all().count(), 6)
-
-        # The one that exists should be deleted, the others ignored.
-        bundles_seen = [Bundle(obj=Note.objects.get(pk=1)), Bundle(obj=Note()), Bundle()]
-        note.rollback(bundles_seen)
-        self.assertEqual(Note.objects.all().count(), 5)
 
     def test_is_valid(self):
         # Using the plug.

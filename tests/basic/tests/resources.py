@@ -176,13 +176,3 @@ class SlugBasedResourceTestCase(TestCase):
         # Make sure it looked up the right instance, even though we didn't
         # hand it a PK...
         self.assertEqual(new_bundle.obj.pk, self.n1_bundle.obj.pk)
-
-    def test_rollback(self):
-        bundles = [
-            self.n1_bundle
-        ]
-        self.resource.rollback(bundles)
-
-        # Make sure it's gone.
-        self.assertRaises(SlugBasedNote.DoesNotExist, SlugBasedNote.objects.get, pk='first-post')
-
